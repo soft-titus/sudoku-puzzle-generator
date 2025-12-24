@@ -52,3 +52,9 @@
 - 
 - feat: skip heartbeat messages
 
+
+
+## 1.1.1 - 2025-12-24
+- Merge pull request #11 from soft-titus/dev
+- fix: should remove empty line from git commits list
+
