@@ -55,7 +55,7 @@ jobs:
           if [ "$TAG_EXISTS" = "false" ]; then
             git log --oneline --pretty=format:"%s" HEAD > $GITHUB_WORKSPACE/commits.txt
           else
-            git log --oneline $VERSION..HEAD --pretty=format:"%s"
+            git log --oneline $VERSION..HEAD --pretty=format:"%s" > $GITHUB_WORKSPACE/commits.txt
           fi
 
           if grep -q "BREAKING CHANGE: " $GITHUB_WORKSPACE/commits.txt; then
