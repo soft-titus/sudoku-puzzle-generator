@@ -171,6 +171,16 @@ func main() {
 
 		log.Infof("Received message: %s", string(msg.Value))
 
+		// Quick heartbeat check
+		var raw map[string]interface{}
+		if err := json.Unmarshal(msg.Value, &raw); err == nil {
+			if msgType, ok := raw["type"].(string); ok && msgType == "heartbeat" {
+				log.Infof("Heartbeat message received, skipping processing for partition %d offset %d", msg.Partition, msg.Offset)
+				commitMessage(context.Background(), r, msg)
+				continue
+			}
+		}
+
 		// Extract retry count
 		retryCount := 0
 		for _, h := range msg.Headers {
