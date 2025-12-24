@@ -54,9 +54,9 @@ jobs:
           PATCH=$(echo $VERSION | cut -d. -f3)
 
           if [ "$TAG_EXISTS" = "false" ]; then
-            git log --pretty=format:"%s%n" HEAD > $GITHUB_WORKSPACE/commits.txt
+            git log --pretty=format:"%s%n" HEAD | grep -v "^\s*$" > $GITHUB_WORKSPACE/commits.txt
           else
-            git log $VERSION..HEAD --pretty=format:"%s%n" > $GITHUB_WORKSPACE/commits.txt
+            git log $VERSION..HEAD --pretty=format:"%s%n" | grep -v "^\s*$" > $GITHUB_WORKSPACE/commits.txt
           fi
           
           echo "Number of commits: $(wc -l < $GITHUB_WORKSPACE/commits.txt)"
