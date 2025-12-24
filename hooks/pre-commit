@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Get staged Go files
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=d -- '*.go')
+STAGED_DIRS=$(git diff --cached --name-only --diff-filter=d -- '*.go' | xargs -n1 dirname | sort -u)
+
+if [ -z "$STAGED_GO_FILES" ]; then
+    echo "No staged Go files. Skipping."
+    exit 0
+fi
+
+echo "Checking code formatting with gofmt..."
+UNFORMATTED=$(gofmt -l $STAGED_GO_FILES)
+if [ -n "$UNFORMATTED" ]; then
+    echo "The following files are not properly formatted:"
+    echo "$UNFORMATTED"
+    echo "Please run 'gofmt -w <file>' to format them."
+    exit 1
+fi
+
+echo "Running golangci-lint on staged files..."
+for dir in $STAGED_DIRS; do
+    echo "- ${dir}"
+    golangci-lint run "$dir"
+    if [ $? -ne 0 ]; then
+        echo "golangci-lint failed. Please fix the issues."
+        exit 1
+    fi
+done
+
+echo "Running go vet..."
+for dir in $STAGED_DIRS; do
+    echo "- ${dir}"
+    go vet ./"${dir}"
+    if [ $? -ne 0 ]; then
+        echo "go vet found issues. Please fix them."
+        exit 1
+    fi
+done
+
+echo "Checking go.mod / go.sum with 'go mod tidy'..."
+GO111MODULE=on go mod tidy -v -e
+if ! git diff --exit-code go.mod go.sum >/dev/null; then
+    echo "go.mod / go.sum is not tidy. Please run 'go mod tidy'."
+    exit 1
+fi
+
+echo "All staged Go checks passed!"
+exit 0

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: "go"
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.7.2
+
+      - name: Run gofmt (format check)
+        run: |
+          UNFORMATTED=$(gofmt -l ./)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not properly formatted:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
+
+      - name: Check go.mod / go.sum with go mod tidy
+        run: |
+          GO111MODULE=on go mod tidy -v -e
+          if ! git diff --exit-code go.mod go.sum >/dev/null; then
+            echo "go.mod / go.sum are not tidy. Please run 'go mod tidy'."
+            exit 1
+          fi

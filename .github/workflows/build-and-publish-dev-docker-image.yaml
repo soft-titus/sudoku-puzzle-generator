@@ -1,0 +1,98 @@
+---
+
+name: Build and Publish Dev Docker Image
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Set up Git
+        run: git fetch --tags --prune
+
+      - name: Get highest Git tag
+        id: git_tag
+        run: |
+          TAG=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ -z "$TAG" ]; then
+            echo "No tags found, using '0.0.0' as prefix"
+            echo "tag_prefix=0.0.0" >> $GITHUB_ENV
+          else
+            echo "Highest Git tag is $TAG"
+            echo "tag_prefix=$TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Generate epoch timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Get branch name
+        id: branchname
+        run: echo "branch_name=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
+
+      - name: Determine branch-based version
+        id: version
+        run: |
+          TAG_PREFIX=${{ env.tag_prefix }}
+          BRANCH_NAME=${{ env.branch_name }}
+          TIMESTAMP=${{ env.timestamp }}
+
+          BRANCH_TAG="${TAG_PREFIX}-${BRANCH_NAME}-${TIMESTAMP}"
+          echo "Branch tag is $BRANCH_TAG"
+          echo "branch_tag=$BRANCH_TAG" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ env.branch_tag }} .
+          docker push ghcr.io/${{ github.repository }}:${{ env.branch_tag }}
+
+      - name: Create and push Git tag
+        run: |
+          git tag ${{ env.branch_tag }}
+          git push origin ${{ env.branch_tag }}
+
+      - name: Retain only the last 3 builds
+        run: |
+          REPO_NAME=${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/}
+          BRANCH_NAME=${{ env.branch_name }}
+
+          VERSIONS=$(curl -Ls -H "Accept: application/vnd.github+json" \
+                           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                           -H "X-GitHub-Api-Version: 2022-11-28" \
+                           https://api.github.com/user/packages/container/$REPO_NAME/versions)
+
+          VERSION_IDS=$(echo "$VERSIONS" | \
+            jq -r --arg branch "$BRANCH_NAME" \
+            '.[] | select(.metadata.container.tags[] | test("^[0-9]+\\.[0-9]+\\.[0-9]+-" + $branch)) | .id' | tail -n +4)
+
+          for VERSION_ID in $VERSION_IDS; do
+            echo "Deleting old version ID: $VERSION_ID"
+            curl -Ls -X DELETE -H "Accept: application/vnd.github+json" \
+                           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                           -H "X-GitHub-Api-Version: 2022-11-28" \
+                           https://api.github.com/user/packages/container/$REPO_NAME/versions/$VERSION_ID
+          done
