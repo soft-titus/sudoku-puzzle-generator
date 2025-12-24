@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
-          cache: "go"
+          cache: true
 
       - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v9
