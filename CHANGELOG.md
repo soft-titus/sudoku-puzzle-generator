@@ -58,3 +58,10 @@
 - Merge pull request #11 from soft-titus/dev
 - fix: should remove empty line from git commits list
 
+
+
+## 1.1.2 - 2025-12-24
+- Merge pull request #12 from soft-titus/dev
+- docs: Update README.md
+- fix: Update ingester and producer command line arguments to use kebab-case instead of camel-case
+
