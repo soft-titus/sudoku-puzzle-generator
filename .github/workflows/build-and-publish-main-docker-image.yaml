@@ -53,10 +53,12 @@ jobs:
           PATCH=$(echo $VERSION | cut -d. -f3)
 
           if [ "$TAG_EXISTS" = "false" ]; then
-            git log --oneline --pretty=format:"%s" HEAD > $GITHUB_WORKSPACE/commits.txt
+            git log --pretty=format:"%s" HEAD > $GITHUB_WORKSPACE/commits.txt
           else
-            git log --oneline $VERSION..HEAD --pretty=format:"%s" > $GITHUB_WORKSPACE/commits.txt
+            git log $VERSION..HEAD --pretty=format:"%s" --no-merges > $GITHUB_WORKSPACE/commits.txt
           fi
+          
+          cat $GITHUB_WORKSPACE/commits.txt
 
           if grep -q "BREAKING CHANGE: " $GITHUB_WORKSPACE/commits.txt; then
             MAJOR=$((MAJOR + 1))
