@@ -53,9 +53,9 @@ jobs:
           PATCH=$(echo $VERSION | cut -d. -f3)
 
           if [ "$TAG_EXISTS" = "false" ]; then
-            git log --pretty=format:"%s%n" HEAD | grep -ve "^\s*$" > $GITHUB_WORKSPACE/commits.txt
+            git log --pretty=format:"%s%n" HEAD | grep -v "^\s*$" > $GITHUB_WORKSPACE/commits.txt
           else
-            git log $VERSION..HEAD --pretty=format:"%s%n" | grep -ve '^Merge pull request' -ve "^\s*$" > $GITHUB_WORKSPACE/commits.txt
+            git log $VERSION..HEAD --pretty=format:"%s%n" | grep -v '^Merge pull request' | grep -v "^\s*$" > $GITHUB_WORKSPACE/commits.txt
           fi
           
           cat $GITHUB_WORKSPACE/commits.txt
