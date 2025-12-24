@@ -58,8 +58,8 @@ jobs:
             git log $VERSION..HEAD --pretty=format:"%s%n" | grep -v '^Merge pull request' | grep -v "^\s*$" > $GITHUB_WORKSPACE/commits.txt
           fi
           
+          echo "Number of commits: $(wc -l < $GITHUB_WORKSPACE/commits.txt)"
           cat $GITHUB_WORKSPACE/commits.txt
-          echo "Number of commits : " $(cat $GITHUB_WORKSPACE/commits.txt | wc -l)
 
           if grep -q "BREAKING CHANGE: " $GITHUB_WORKSPACE/commits.txt; then
             MAJOR=$((MAJOR + 1))
