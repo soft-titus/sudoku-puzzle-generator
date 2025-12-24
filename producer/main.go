@@ -34,8 +34,8 @@ func main() {
 	// Optional command-line argument for puzzleId
 	var puzzleID string
 	var retryCountArg int
-	flag.StringVar(&puzzleID, "puzzleId", "", "Puzzle ID to send")
-	flag.IntVar(&retryCountArg, "retryCount", -1, "Retry count to set in header (optional)")
+	flag.StringVar(&puzzleID, "puzzle-id", "", "Puzzle ID to send")
+	flag.IntVar(&retryCountArg, "retry-count", -1, "Retry count to set in header (optional)")
 	flag.Parse()
 
 	if puzzleID == "" {

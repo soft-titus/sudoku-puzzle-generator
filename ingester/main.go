@@ -15,8 +15,8 @@ import (
 
 func main() {
 	// Command-line arguments
-	puzzleId := flag.String("puzzleId", "", "Puzzle ID (required)")
-	puzzleSize := flag.Int("puzzleSize", 9, "Puzzle size (default 9)")
+	puzzleId := flag.String("puzzle-id", "", "Puzzle ID (required)")
+	puzzleSize := flag.Int("puzzle-size", 9, "Puzzle size (default 9)")
 	level := flag.String("level", "EASY", "Puzzle level (default EASY)")
 	status := flag.String("status", "GENERATING_PUZZLE", "Puzzle status (default GENERATING_PUZZLE)")
 	flag.Parse()
