@@ -2,7 +2,6 @@
 
 # Get staged Go files
 STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=d -- '*.go')
-STAGED_DIRS=$(git diff --cached --name-only --diff-filter=d -- '*.go' | xargs -n1 dirname | sort -u)
 
 if [ -z "$STAGED_GO_FILES" ]; then
     echo "No staged Go files. Skipping."
@@ -17,6 +16,8 @@ if [ -n "$UNFORMATTED" ]; then
     echo "Please run 'gofmt -w <file>' to format them."
     exit 1
 fi
+
+STAGED_DIRS=$(git diff --cached --name-only --diff-filter=d -- '*.go' | xargs -n1 dirname | sort -u)
 
 echo "Running golangci-lint on staged files..."
 for dir in $STAGED_DIRS; do
