@@ -65,3 +65,9 @@
 - docs: Update README.md
 - fix: Update ingester and producer command line arguments to use kebab-case instead of camel-case
 
+
+
+## 1.1.3 - 2025-12-28
+- Merge pull request #13 from soft-titus/dev
+- fix: update status on mongodb when message can't be process anymore and send to DLQ, also set failedAt, failedReason, and updatedAt
+
