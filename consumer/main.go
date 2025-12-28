@@ -181,21 +181,6 @@ func main() {
 			}
 		}
 
-		// Extract retry count
-		retryCount := 0
-		for _, h := range msg.Headers {
-			if h.Key == "retry-count" {
-				retryCount, _ = strconv.Atoi(string(h.Value))
-				break
-			}
-		}
-
-		// DLQ if max retries reached
-		if retryCount >= maxRetries {
-			pushToDLQ(context.Background(), msg, wDLQ, r, fmt.Sprintf("retry exceeded (%d)", retryCount))
-			continue
-		}
-
 		// Parse payload as JSON
 		var payload map[string]interface{}
 		if err := json.Unmarshal(msg.Value, &payload); err != nil {
@@ -225,6 +210,21 @@ func main() {
 				log.Info("Failed to query MongoDB:", err)
 				handleRetry(context.Background(), msg, wRetry, r)
 			}
+			continue
+		}
+
+		// Extract retry count
+		retryCount := 0
+		for _, h := range msg.Headers {
+			if h.Key == "retry-count" {
+				retryCount, _ = strconv.Atoi(string(h.Value))
+				break
+			}
+		}
+
+		// DLQ if max retries reached
+		if retryCount >= maxRetries {
+			pushToDLQ(context.Background(), msg, wDLQ, r, fmt.Sprintf("retry exceeded (%d)", retryCount))
 			continue
 		}
 
@@ -303,6 +303,8 @@ func handleRetry(ctx context.Context, msg kafka.Message, wRetry *kafka.Writer, r
 }
 
 func pushToDLQ(ctx context.Context, msg kafka.Message, wDLQ *kafka.Writer, r *kafka.Reader, reason string) {
+	failedAt := time.Now().UTC()
+
 	// Parse payload or wrap invalid payload
 	var payload map[string]interface{}
 	if err := json.Unmarshal(msg.Value, &payload); err != nil {
@@ -311,9 +313,12 @@ func pushToDLQ(ctx context.Context, msg kafka.Message, wDLQ *kafka.Writer, r *ka
 		}
 	}
 
+	puzzleID, _ := payload["puzzleId"].(string)
+	markPuzzleFailed(ctx, puzzleID, reason, failedAt)
+
 	// Add failedReason and failedAt
 	payload["failedReason"] = reason
-	payload["failedAt"] = time.Now().Format(time.RFC3339)
+	payload["failedAt"] = failedAt.Format(time.RFC3339)
 
 	// Marshal payload
 	payloadBytes, err := json.Marshal(payload)
@@ -349,6 +354,36 @@ func commitMessage(ctx context.Context, r *kafka.Reader, msg kafka.Message) {
 	}
 }
 
+func markPuzzleFailed(ctx context.Context, puzzleID string, reason string, failedAt time.Time) {
+	if puzzleID == "" {
+		return
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"status":       "FAILED",
+			"failedAt":     failedAt,
+			"failedReason": reason,
+			"updatedAt":    time.Now().UTC(),
+		},
+	}
+
+	res, err := mongoCollection.UpdateOne(
+		ctx,
+		bson.M{"puzzleId": puzzleID},
+		update,
+	)
+
+	if err != nil {
+		log.Warnf("Failed to update puzzle %s as FAILED: %v", puzzleID, err)
+		return
+	}
+
+	if res.MatchedCount == 0 {
+		log.Infof("No MongoDB document found for puzzleId=%s, skipping FAILED update", puzzleID)
+	}
+}
+
 func processPuzzle(rng *rand.Rand, ctx context.Context, puzzleId string, puzzleSize int, level string) error {
 	solution := generateSudokuSolution(rng, puzzleSize)
 	puzzle := generatePuzzleWithUniqueSolution(rng, solution, puzzleSize, level)
@@ -361,7 +396,7 @@ func processPuzzle(rng *rand.Rand, ctx context.Context, puzzleId string, puzzleS
 	_, err := mongoCollection.UpdateOne(
 		ctx,
 		bson.M{"puzzleId": puzzleId},
-		bson.M{"$set": bson.M{"solution": solution, "puzzle": puzzle, "status": "GENERATING_IMAGE"}},
+		bson.M{"$set": bson.M{"solution": solution, "puzzle": puzzle, "status": "GENERATING_IMAGE", "updatedAt": time.Now().UTC()}},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update puzzle in MongoDB: %v", err)
