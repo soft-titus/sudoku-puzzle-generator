@@ -61,11 +61,11 @@ docker compose run --rm ingester \
   --puzzle-id pz-001 --puzzle-size 9 --level HARD --status GENERATING_PUZZLE
 ```
 
-| Parameter   | Required | Notes |
-|-------------|----------|-------|
-| puzzle-id   | yes      | Any string value |
-| puzzle-size | no       | Default 9, valid: 4 / 9 / 16 |
-| level       | no       | Default "EASY", valid: "EASY" / "MEDIUM" / "HARD" |
+| Parameter   | Required | Notes                                                    |
+|-------------|----------|----------------------------------------------------------|
+| puzzle-id   | yes      | Any string value                                         |
+| puzzle-size | no       | Default 9, valid: 4 / 9 / 16                             |
+| level       | no       | Default "EASY", valid: "EASY" / "MEDIUM" / "HARD"        |
 | status      | no       | Default "GENERATING_PUZZLE", must be "GENERATING_PUZZLE" |
 
 6. Send Kafka messages:
@@ -74,9 +74,9 @@ docker compose run --rm ingester \
 docker compose run --rm producer --puzzle-id pz-001 --retry-count 0
 ```
 
-| Parameter   | Required | Notes |
-|-------------|----------|-------|
-| puzzle-id   | yes      | Must exist in MongoDB or worker will fail |
+| Parameter   | Required | Notes                                                   |
+|-------------|----------|---------------------------------------------------------|
+| puzzle-id   | yes      | Must exist in MongoDB or worker will fail               |
 | retry-count | no       | Default 0, must be less than TASK_MAX_RETRIES in `.env` |
 
 ---
